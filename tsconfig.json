@@ -1,0 +1,20 @@
+{
+    /**编译器规范*/
+  "compilerOptions": {
+    /**编译成es5规范的脚本，即javascript*/
+    "target": "es5",
+    /**使用的规范*/
+    "module": "commonjs",
+    /*保留装饰器元数据*/
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    /*编译结果放到build文件夹里*/
+    "outDir": "build",
+    /*开发的时候使用es6语法*/
+    "lib": ["es6"]
+  },
+  "exclude": [
+      /*编译后以下所有文件夹会被排除*/
+    "node_modules"
+  ]
+}
