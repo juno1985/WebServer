@@ -1,4 +1,5 @@
 import * as express from 'express';
+import * as path from "path";
 import {Server} from 'ws';
 const app = express();
 
@@ -12,7 +13,7 @@ export class Product{
       public categories:Array<string>
     ){}
   }
-  export class Comment{
+export class Comment{
   constructor(
     public id:number,
     public productId:number,
@@ -50,6 +51,24 @@ app.get('/', (req, res)=>{
 });
 
 app.get('/api/products',(req, res)=>{
+  //拿到所有数据
+    let result= products;
+  //拿到get请求的所有参数
+    let params= req.query;
+
+    if(params.title){
+        result=result.filter((p)=>p.title.indexOf(params.title)!== -1);
+    }
+    if(params.price && result.length>0){
+      //得到价格低于搜索条件的
+      result=result.filter((p)=>p.price <=parseInt(params.price));
+  }
+  if(params.category!=="-1" && result.length>0){
+    result=result.filter((p)=>p.categories.indexOf(params.category)!== -1);
+}
+  
+
+
     res.json(products);
 });
 
@@ -65,5 +84,37 @@ const server = app.listen(8000, "localhost",()=>{
     console.log("服务器已启动,使用域名localhost,端口8000!!!")
 });
 
+const subscription=new Map<any, number[]>();
+
 const wsServer=new Server({port:8085});
-wsServer.on("connection", websocket=>{websocket.send("服务器主动推送消息")});
+wsServer.on("connection", websocket=>{
+  // websocket.send("服务器主动推送消息");
+  websocket.on('message',message=>{
+  
+    
+    let prodIds=subscription.get(websocket)||[];
+    subscription.set(websocket,[...prodIds,JSON.parse(message.toString()).productId]);
+  });
+});
+
+//productId->price
+const currentBids=new Map<number,number>();
+
+setInterval(()=>{
+  products.forEach(p=>{
+    let currentBid=currentBids.get(p.id)||p.price;
+    let newBid=currentBid+Math.random()*5;
+    currentBids.set(p.id,newBid);
+  });
+  subscription.forEach((productIds:number[],ws)=>{
+    if(ws.readyState==1){
+    let newBids = productIds.map(pid=>({
+      productId:pid,
+      bid:currentBids.get(pid)
+    }));
+    ws.send(JSON.stringify(newBids));}
+    else{
+      subscription.delete(ws);
+    }
+  });
+},2000);
